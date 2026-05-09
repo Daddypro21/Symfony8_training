@@ -19,8 +19,7 @@ Il contient des exemples de code commentés, un cours théorique évolutif et un
 | **PHP** | 8.4+ | `php -v` |
 | **Composer** | 2.x | `composer -V` |
 | **Symfony CLI** | dernière version | `symfony version` |
-| **Docker Desktop** | 4.x | `docker -v` |
-| **Docker Compose** | v2.x (intégré à Docker) | `docker compose version` |
+| **MariaDB** | 10.11+ | `mysql --version` |
 | **Git** | 2.x | `git --version` |
 
 ### Outils recommandés
@@ -29,7 +28,7 @@ Il contient des exemples de code commentés, un cours théorique évolutif et un
 |---|---|
 | **PHPStorm** ou **VS Code** | IDE avec support Symfony/PHP |
 | **Extension Symfony pour VS Code** | Autocomplétion, debug |
-| **TablePlus** ou **DBeaver** | Interface graphique pour PostgreSQL |
+| **TablePlus** ou **DBeaver** | Interface graphique pour MariaDB |
 
 ---
 
@@ -63,34 +62,20 @@ Ouvrir `.env.local` et définir au minimum :
 ```dotenv
 APP_SECRET=une_chaine_aleatoire_de_32_caracteres
 
-# Base de données (garder PostgreSQL ou choisir SQLite pour simplifier)
-# Option 1 : PostgreSQL via Docker (recommandé)
-DATABASE_URL="postgresql://app:!ChangeMe!@127.0.0.1:5432/app?serverVersion=16&charset=utf8"
-
-# Option 2 : SQLite (aucune installation requise)
-# DATABASE_URL="sqlite:///%kernel.project_dir%/var/data_dev.db"
+# Base de données MariaDB locale
+DATABASE_URL="mysql://app:!ChangeMe!@127.0.0.1:3306/app?serverVersion=10.11.2-MariaDB&charset=utf8mb4"
 ```
 
-### 4. Démarrer les services Docker
+> Remplacer `app` et `!ChangeMe!` par l'utilisateur et le mot de passe de votre MariaDB local.
 
-```bash
-docker compose up -d
-```
-
-Cela démarre :
-- **PostgreSQL 16** — base de données principale (port `5432`)
-- **Mailpit** — serveur SMTP de dev pour les emails (SMTP `1025`, interface web `8025`)
-
-> Vérifier que les conteneurs tournent : `docker compose ps`
-
-### 5. Créer la base de données et les tables
+### 4. Créer la base de données et les tables
 
 ```bash
 symfony console doctrine:database:create
 symfony console doctrine:migrations:migrate
 ```
 
-### 6. Démarrer le serveur de développement
+### 5. Démarrer le serveur de développement
 
 ```bash
 symfony serve
@@ -110,7 +95,12 @@ training_project/
 │   │       ├── 01_ModernPHP.php
 │   │       ├── 02_OOP.php
 │   │       ├── 03_Attributes.php
-│   │       └── ...
+│   │       ├── 04_Interfaces.php
+│   │       ├── 05_Closures.php
+│   │       ├── 06_AbstractClasses.php
+│   │       ├── 07_Exceptions.php
+│   │       ├── 08_Traits.php
+│   │       └── 09_Enums.php
 │   ├── Controller/         ← Contrôleurs Symfony (auto-découverte)
 │   ├── Entity/             ← Entités Doctrine
 │   └── Repository/         ← Repositories Doctrine
@@ -122,8 +112,7 @@ training_project/
 ├── migrations/             ← Migrations Doctrine
 ├── tests/                  ← Tests PHPUnit
 ├── cours-symfony-certification.md   ← Cours théorique complet
-├── symfony.certification.md         ← Programme officiel de l'examen
-└── compose.yaml            ← Services Docker (PostgreSQL, Mailpit)
+└── symfony.certification.md         ← Programme officiel de l'examen
 ```
 
 ---
@@ -133,11 +122,9 @@ training_project/
 ### Développement
 
 ```bash
-symfony serve                          # Démarrer le serveur dev
-symfony serve -d                       # En arrière-plan
-symfony server:stop                    # Arrêter le serveur
-docker compose up -d                   # Démarrer Docker en arrière-plan
-docker compose down                    # Arrêter Docker
+symfony serve          # Démarrer le serveur dev
+symfony serve -d       # En arrière-plan
+symfony server:stop    # Arrêter le serveur
 ```
 
 ### Base de données
@@ -145,7 +132,8 @@ docker compose down                    # Arrêter Docker
 ```bash
 symfony console doctrine:database:create              # Créer la base
 symfony console doctrine:migrations:migrate           # Appliquer les migrations
-symfony console doctrine:migrations:generate          # Générer une migration
+symfony console doctrine:migrations:generate          # Générer une migration vide
+symfony console make:migration                        # Générer depuis les entités
 symfony console doctrine:schema:validate              # Valider le mapping
 symfony console doctrine:fixtures:load                # Charger les fixtures (si installées)
 ```
@@ -199,9 +187,9 @@ symfony console asset-map:compile                       # Compiler pour la prod
 |---|---|---|
 | `APP_ENV` | `dev` | Environnement (`dev`, `test`, `prod`) |
 | `APP_SECRET` | *(vide)* | Clé secrète — **obligatoire**, à définir dans `.env.local` |
-| `DATABASE_URL` | PostgreSQL local | URL de connexion à la base |
+| `DATABASE_URL` | MariaDB local | URL de connexion à la base |
 | `MESSENGER_TRANSPORT_DSN` | `doctrine://default` | Transport pour les messages async |
-| `MAILER_DSN` | `null://null` | Transport email (Mailpit en dev) |
+| `MAILER_DSN` | `null://null` | Transport email |
 
 ### Fichiers d'environnement
 
@@ -211,15 +199,6 @@ symfony console asset-map:compile                       # Compiler pour la prod
 .env.dev          ← Spécifique à APP_ENV=dev (committé)
 .env.test         ← Spécifique aux tests (committé)
 .env.prod.local   ← Secrets de production (non committé, sur le serveur)
-```
-
-### Bases de données alternatives
-
-Si vous ne voulez pas utiliser Docker, vous pouvez utiliser **SQLite** (aucune installation requise) :
-
-```dotenv
-# Dans .env.local
-DATABASE_URL="sqlite:///%kernel.project_dir%/var/data_dev.db"
 ```
 
 ---
@@ -235,10 +214,8 @@ DATABASE_URL="sqlite:///%kernel.project_dir%/var/data_dev.db"
 | Templates | Twig | 3.x |
 | Frontend JS | Stimulus + Turbo (Hotwired) | 3.x / 8.x |
 | Assets | Symfony Asset Mapper | 8.0.* |
-| Base de données | PostgreSQL | 16 |
+| Base de données | MariaDB | 10.11+ |
 | Tests | PHPUnit | 13.1 |
-| Conteneurs | Docker + Docker Compose | v2 |
-| Emails (dev) | Mailpit | dernière version |
 | Serveur dev | Symfony CLI (FrankenPHP) | dernière version |
 
 > **Pas de Node.js / npm / webpack** : le projet utilise l'Asset Mapper natif de Symfony, qui gère les modules ES directement via CDN et importmap.
@@ -268,11 +245,8 @@ La progression est suivie dans [`cours-symfony-certification.md`](./cours-symfon
 **`composer install` échoue sur ext-ctype / ext-iconv**
 → Activer ces extensions dans `php.ini` (décommenter les lignes `extension=ctype`, `extension=iconv`)
 
-**La base de données ne démarre pas**
-→ Vérifier que Docker Desktop est lancé, puis : `docker compose down && docker compose up -d`
-
-**Port 5432 déjà utilisé**
-→ Une instance PostgreSQL locale tourne déjà. Modifier le port dans `compose.override.yaml` ou arrêter le service local.
+**Connexion MariaDB refusée**
+→ Vérifier que le service MariaDB est démarré, et que l'utilisateur/mot de passe dans `.env.local` correspondent bien à votre installation locale.
 
 **`APP_SECRET` manquant**
 → Créer `.env.local` et y définir `APP_SECRET=<32_caracteres_aleatoires>`
