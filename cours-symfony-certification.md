@@ -11,13 +11,13 @@
 |---|--------|--------|
 | 01 | PHP API up to PHP 8.4 | ✅ Terminé |
 | 02 | Object Oriented Programming | ✅ Terminé |
-| 03 | Attributes | ✅ En cours |
-| 04 | Interfaces | ⬜ |
-| 05 | Anonymous functions and closures | ⬜ |
-| 06 | Abstract classes | ⬜ |
-| 07 | Exception and error handling | ⬜ |
-| 08 | Traits | ⬜ |
-| 09 | Enums | ⬜ |
+| 03 | Attributes | ✅ Terminé |
+| 04 | Interfaces | ✅ Terminé |
+| 05 | Anonymous functions and closures | ✅ Terminé |
+| 06 | Abstract classes | ✅ Terminé |
+| 07 | Exception and error handling | ✅ Terminé |
+| 08 | Traits | ✅ Terminé |
+| 09 | Enums | ✅ Terminé |
 | 10 | HTTP Specification (RFC 9110) | ⬜ |
 | 11 | Status codes | ⬜ |
 | 12 | HTTP request | ⬜ |
@@ -576,6 +576,579 @@ public function index(): void {}
 
 ---
 
-*Prochain chapitre : **3.1 — Interfaces***
+*Chapitre terminé.*
 
+---
 
+## Chapitre 4 — Interfaces
+
+### 4.1 Définition
+
+Une interface définit un **contrat** : la liste des méthodes que toute classe implémentant cette interface doit fournir. Elle ne contient **aucune logique**.
+
+```php
+interface LoggerInterface
+{
+    public function log(string $niveau, string $message): void;
+    public function info(string $message): void;
+    public function error(string $message): void;
+}
+```
+
+---
+
+### 4.2 Implémenter une interface (`implements`)
+
+- Toutes les méthodes déclarées doivent être implémentées — sinon : Fatal Error.
+- Une classe peut implémenter **plusieurs** interfaces.
+
+```php
+class ConsoleLogger implements LoggerInterface
+{
+    public function log(string $niveau, string $message): void
+    {
+        echo "[{$niveau}] {$message}\n";
+    }
+    public function info(string $message): void  { $this->log('info', $message); }
+    public function error(string $message): void { $this->log('error', $message); }
+}
+```
+
+---
+
+### 4.3 Type-hinting sur interface = découplage
+
+```php
+class CommandeService
+{
+    public function __construct(
+        private LoggerInterface $logger, // accepte TOUTE implémentation
+    ) {}
+}
+
+// On peut passer FileLogger, ConsoleLogger, NullLogger…
+$service = new CommandeService(new ConsoleLogger());
+```
+
+> C'est le principe de **l'inversion de dépendance** (SOLID — lettre D). Symfony construit tous ses services sur ce principe.
+
+---
+
+### 4.4 Héritage d'interfaces
+
+```php
+interface ReadableRepositoryInterface
+{
+    public function find(int $id): ?object;
+}
+
+interface RepositoryInterface extends ReadableRepositoryInterface
+{
+    public function save(object $entite): void;
+    public function findBy(array $criteres): array;
+}
+```
+
+La classe qui implémente `RepositoryInterface` doit honorer **tout** le contrat cumulé.
+
+---
+
+### 4.5 Interfaces et Symfony
+
+| Situation | Comportement |
+|---|---|
+| 1 seule classe implémente l'interface | Autowired automatiquement |
+| Plusieurs classes implémentent l'interface | Alias dans `services.yaml` ou `#[Autowire(service: '...')]` |
+
+---
+
+### Points clés pour la certification
+
+| Concept | À retenir |
+|---|---|
+| `implements` | Contrat obligatoire, plusieurs interfaces possibles |
+| Type-hint sur interface | Découplage, substitution libre |
+| `extends` entre interfaces | Héritage de contrats cumulatifs |
+| `instanceof` | Fonctionne avec les interfaces |
+| Constantes d'interface | Accessibles via l'interface ET la classe |
+
+---
+
+*Chapitre terminé.*
+
+---
+
+## Chapitre 5 — Anonymous Functions and Closures
+
+### 5.1 Fonction anonyme (closure classique)
+
+```php
+$multiplier = function(int $a, int $b): int {
+    return $a * $b;
+};
+
+echo $multiplier(3, 4); // 12
+```
+
+---
+
+### 5.2 Capture de variables : `use`
+
+Une closure ne capture **pas** automatiquement les variables extérieures — il faut les déclarer avec `use`.
+
+```php
+$tva = 0.20;
+
+$calculerTTC = function(float $ht) use ($tva): float {
+    return $ht * (1 + $tva); // $tva capturé par valeur (copie)
+};
+
+// Capture par référence
+$compteur = 0;
+$incrementer = function() use (&$compteur): void {
+    $compteur++;
+};
+```
+
+---
+
+### 5.3 Arrow function `fn` (PHP 7.4+)
+
+- Syntaxe courte : `fn(params) => expression`
+- Capture **automatiquement** les variables extérieures par valeur (pas de `use`)
+- Corps = une seule expression (pas de `return` explicite)
+
+```php
+$tva = 0.20;
+$ttc = fn(float $ht): float => $ht * (1 + $tva); // $tva capturé auto
+
+$doubles = array_map(fn(int $n) => $n * 2, [1, 2, 3]); // [2, 4, 6]
+```
+
+---
+
+### 5.4 Différences closure vs arrow function
+
+| | Closure `function` | Arrow function `fn` |
+|---|---|---|
+| Capture | Manuelle (`use`) | Automatique par valeur |
+| Corps | Plusieurs lignes | Une seule expression |
+| `return` | Obligatoire | Implicite |
+| Capture par référence | `use (&$var)` | Impossible |
+
+---
+
+### 5.5 Formes de callable en PHP
+
+```php
+// Fonction nommée
+$cb = 'strtoupper';
+
+// Méthode statique
+$cb = [MaClasse::class, 'methodeStatique'];
+
+// Méthode d'instance
+$cb = [$objet, 'methode'];
+
+// First Class Callable (PHP 8.1)
+$cb = $objet->methode(...);
+
+// Objet __invoke
+$cb = new MonObjetCallable();
+```
+
+---
+
+### Points clés pour la certification
+
+| Concept | À retenir |
+|---|---|
+| `use ($var)` | Copie par valeur |
+| `use (&$var)` | Référence (modifie l'original) |
+| Arrow `fn` | Capture auto, corps = 1 expression |
+| `Closure::bind` | Lie une closure à un objet (accès aux privés) |
+| `__invoke` | Rend un objet appelable comme fonction |
+
+---
+
+*Chapitre terminé.*
+
+---
+
+## Chapitre 6 — Abstract Classes
+
+### 6.1 Définition
+
+Une classe abstraite est un **intermédiaire** entre une interface (contrat pur) et une classe concrète (logique complète). Elle peut contenir des méthodes avec **et** sans corps.
+
+```php
+abstract class Notification
+{
+    abstract protected function envoyer(): bool; // sans corps — obligation pour l'enfant
+
+    public function envoyerAvecLog(): bool       // avec corps — partagé par tous
+    {
+        echo "[LOG] Envoi via " . static::class . "\n";
+        return $this->envoyer();
+    }
+}
+```
+
+> `new Notification()` → Fatal Error : cannot instantiate abstract class.
+
+---
+
+### 6.2 Règles importantes
+
+- Une classe abstraite **ne peut pas** être instanciée directement.
+- Si une méthode est `abstract`, la classe doit l'être aussi.
+- Une classe enfant **doit** implémenter toutes les méthodes abstraites — sinon elle doit être abstraite elle-même.
+- `final` sur une méthode concrète empêche la surcharge.
+
+---
+
+### 6.3 Abstract vs Interface
+
+| | Interface | Classe abstraite |
+|---|---|---|
+| Logique | ✗ Aucune | ✓ Méthodes concrètes possibles |
+| Propriétés | ✗ | ✓ |
+| Constructeur | ✗ | ✓ |
+| Héritage multiple | ✓ (`implements` N interfaces) | ✗ (1 seul `extends`) |
+| Usage | "peut faire X" | "est un X, partage du code" |
+
+---
+
+### 6.4 Template Method Pattern
+
+Pattern courant avec les classes abstraites : la méthode publique orchestre l'algorithme, les étapes sont déléguées aux sous-classes.
+
+```php
+abstract class ImportateurDonnees
+{
+    final public function importer(string $source): int  // algo fixé
+    {
+        $data = $this->lire($source);
+        $data = $this->valider($data);
+        return $this->persister($data);
+    }
+
+    abstract protected function lire(string $source): array;
+    abstract protected function valider(array $data): array;
+    abstract protected function persister(array $data): int;
+}
+```
+
+> Symfony `Command` et `AbstractType` (formulaires) suivent ce pattern.
+
+---
+
+### Points clés pour la certification
+
+| Concept | À retenir |
+|---|---|
+| `abstract class` | Non instanciable directement |
+| `abstract method` | Pas de corps, implémentation obligatoire |
+| `final` méthode | Empêche la surcharge |
+| `parent::` | Appelle la version parente |
+| Symfony | `AbstractController`, `Command`, `AbstractType` |
+
+---
+
+*Chapitre terminé.*
+
+---
+
+## Chapitre 7 — Exception and Error Handling
+
+### 7.1 Hiérarchie Throwable
+
+```
+Throwable
+├── Error          (erreurs moteur PHP)
+│   ├── TypeError
+│   ├── ValueError
+│   ├── DivisionByZeroError
+│   └── ParseError
+└── Exception      (exceptions applicatives)
+    ├── LogicException
+    │   ├── InvalidArgumentException
+    │   └── BadMethodCallException
+    └── RuntimeException
+        └── UnexpectedValueException
+```
+
+> `catch(\Throwable)` attrape **tout** — à utiliser uniquement en dernier recours.
+
+---
+
+### 7.2 try / catch / finally
+
+```php
+try {
+    $resultat = diviser(10, 0);
+} catch (\InvalidArgumentException $e) {
+    echo $e->getMessage();
+} catch (\RuntimeException | \LogicException $e) { // multi-catch PHP 8
+    echo $e->getMessage();
+} finally {
+    // Toujours exécuté (libération de ressources)
+}
+```
+
+---
+
+### 7.3 Créer ses propres exceptions
+
+```php
+class ProduitNonTrouveException extends \RuntimeException
+{
+    public function __construct(int $id, ?\Throwable $previous = null)
+    {
+        parent::__construct("Produit #{$id} introuvable.", 404, $previous);
+    }
+}
+```
+
+- Hériter de `RuntimeException` pour les erreurs à l'exécution
+- Hériter de `LogicException` pour les bugs du développeur
+
+---
+
+### 7.4 Exception chaining
+
+```php
+try {
+    // erreur bas niveau
+} catch (\RuntimeException $e) {
+    throw new ServiceIndisponibleException("Service KO.", previous: $e);
+}
+
+// Plus tard
+$e->getPrevious(); // retrouver la cause originale
+```
+
+---
+
+### 7.5 Exceptions Symfony
+
+```php
+// Dans un contrôleur
+throw $this->createNotFoundException("Produit introuvable."); // → HTTP 404
+throw new AccessDeniedHttpException();                        // → HTTP 403
+throw new HttpException(503, "Service indisponible.");        // → HTTP 503
+```
+
+Symfony convertit automatiquement les exceptions non catchées en réponse HTTP.
+L'événement `KernelEvents::EXCEPTION` permet d'intercepter et personnaliser.
+
+---
+
+### Points clés pour la certification
+
+| Concept | À retenir |
+|---|---|
+| `Throwable` | Interface commune Exception + Error |
+| `finally` | Toujours exécuté, même après `return` |
+| Multi-catch `\|` | Depuis PHP 8.0 |
+| `$previous` | Chaîner les exceptions, `getPrevious()` |
+| `TypeError` / `ValueError` | Attrapables avec `catch(\Error)` |
+| Symfony | `NotFoundHttpException` → 404, `AccessDeniedHttpException` → 403 |
+
+---
+
+*Chapitre terminé.*
+
+---
+
+## Chapitre 8 — Traits
+
+### 8.1 Définition
+
+Un trait est un mécanisme de **réutilisation horizontale** : il injecte des méthodes dans une classe sans héritage. PHP ne supportant que l'héritage simple, les traits permettent de composer des comportements.
+
+```php
+trait Horodatable
+{
+    private \DateTimeImmutable $creeLe;
+
+    public function initialiserHorodatage(): void
+    {
+        $this->creeLe = new \DateTimeImmutable();
+    }
+
+    public function getCreeLe(): \DateTimeImmutable { return $this->creeLe; }
+}
+
+class Article
+{
+    use Horodatable; // les méthodes du trait sont "copiées" ici
+}
+```
+
+---
+
+### 8.2 Utiliser plusieurs traits
+
+```php
+class Article
+{
+    use Horodatable, SoftDeletable; // séparés par une virgule
+}
+```
+
+---
+
+### 8.3 Résolution de conflits
+
+Quand deux traits ont une méthode du même nom :
+
+```php
+class MonService
+{
+    use TraitA, TraitB {
+        TraitA::log insteadof TraitB; // choisir TraitA
+        TraitB::log as logB;          // garder TraitB sous un alias
+        TraitA::init as private;      // changer la visibilité
+    }
+}
+```
+
+---
+
+### 8.4 Méthodes abstraites dans un trait
+
+```php
+trait Validable
+{
+    abstract protected function getRegles(): array; // la classe doit l'implémenter
+
+    public function valider(array $data): bool
+    {
+        foreach ($this->getRegles() as $champ => $regle) {
+            if ($regle === 'required' && empty($data[$champ])) return false;
+        }
+        return true;
+    }
+}
+```
+
+---
+
+### 8.5 Traits dans Symfony / Doctrine
+
+```php
+// Doctrine Extensions (gedmo/doctrine-extensions)
+class Article
+{
+    use TimestampableEntity;  // createdAt / updatedAt gérés automatiquement
+    use SoftDeleteableEntity; // deletedAt, soft delete
+}
+```
+
+---
+
+### Points clés pour la certification
+
+| Concept | À retenir |
+|---|---|
+| `use TraitA, TraitB` | Plusieurs traits dans une classe |
+| `insteadof` | Choisir une méthode en cas de conflit |
+| `as` | Alias ou changement de visibilité |
+| Méthode abstraite dans trait | La classe doit l'implémenter |
+| Trait dans un trait | Possible via `use` |
+
+---
+
+*Chapitre terminé.*
+
+---
+
+## Chapitre 9 — Enums (PHP 8.1)
+
+### 9.1 Pure Enum (sans valeur scalaire)
+
+```php
+enum Direction
+{
+    case Nord;
+    case Sud;
+    case Est;
+    case Ouest;
+}
+
+$dir = Direction::Nord;
+$dir === Direction::Nord; // true (comparaison ===)
+```
+
+---
+
+### 9.2 Backed Enum (avec valeur `string` ou `int`)
+
+```php
+enum Statut: string
+{
+    case EnAttente = 'en_attente';
+    case Termine   = 'termine';
+}
+
+Statut::Termine->value;          // 'termine'
+Statut::Termine->name;           // 'Termine'
+Statut::from('termine');         // Statut::Termine (ValueError si inconnu)
+Statut::tryFrom('inconnu');      // null (pas d'exception)
+Statut::cases();                 // tableau de toutes les cases
+```
+
+---
+
+### 9.3 Méthodes et interfaces
+
+```php
+enum CouleurFeu: string
+{
+    case Rouge = 'rouge';
+    case Vert  = 'vert';
+
+    public function libelle(): string
+    {
+        return match($this) {
+            self::Rouge => 'STOP',
+            self::Vert  => 'GO',
+        };
+    }
+}
+
+// Un Enum peut aussi implémenter une interface
+enum TypeContrat: string implements MonInterface { ... }
+```
+
+---
+
+### 9.4 Enums et Doctrine
+
+```php
+#[ORM\Column(enumType: Statut::class)]
+private Statut $statut = Statut::EnAttente;
+// Doctrine stocke la valeur scalaire ('en_attente') et reconstruit l'Enum via ::from()
+```
+
+---
+
+### Points clés pour la certification
+
+| Concept | À retenir |
+|---|---|
+| Pure Enum | Pas de valeur scalaire, comparaison `===` |
+| Backed Enum | `string` ou `int`, `->value`, `->name` |
+| `::from()` | Lève `ValueError` si inconnu |
+| `::tryFrom()` | Retourne `null` si inconnu |
+| `::cases()` | Toutes les cases dans un tableau |
+| Doctrine | `enumType:` stocke la valeur scalaire |
+
+---
+
+*Chapitre terminé.*
+
+---
+
+*Prochain chapitre : **HTTP — Specification RFC 9110***
